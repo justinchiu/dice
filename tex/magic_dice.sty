@@ -1,0 +1,43 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{magic_dice}
+
+\RequirePackage{lcg}
+\RequirePackage{tikz}
+\RequirePackage{xparse}
+
+\usetikzlibrary{shapes}
+\tikzset{
+  dot hidden/.style={},
+  line hidden/.style={},
+  dot colour/.style={dot hidden/.append style={color=#1}},
+  dot colour/.default=black,
+  line colour/.style={line hidden/.append style={color=#1}},
+  line colour/.default=black
+}
+
+\def\dotsize{0.1}
+
+\NewDocumentCommand{\drawdie}{O{}m}{
+\begin{tikzpicture}[x=0.75em,y=0.75em,#1, baseline=0.25ex]
+  \draw[rounded corners=0.5,line hidden] (0,0) rectangle (1,1);
+  \ifodd#2
+    \fill[dot hidden] (0.5,0.5) circle (\dotsize);
+  \fi
+  \ifnum#2>1
+  \fill[dot hidden] (0.25,0.25) circle (\dotsize);
+  \fill[dot hidden] (0.75,0.75) circle (\dotsize);
+  \ifnum#2>3
+    \fill[dot hidden] (0.2,0.8) circle (\dotsize);
+    \fill[dot hidden] (0.8,0.2) circle (\dotsize);
+    \ifnum#2>5
+      \fill[dot hidden] (0.8,0.5) circle (\dotsize);
+      \fill[dot hidden] (0.2,0.5) circle (\dotsize);
+    \fi
+  \fi
+\fi
+\end{tikzpicture}
+}
+
+\reinitrand[last=6, counter=die, quiet, seed=42]
+\newcommand{\magic}{{\rand\drawdie{2}}}
+\newcommand{\smagic}{\scaleobj{0.6}{\magic}}

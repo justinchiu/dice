@@ -1,15 +1,17 @@
 \documentclass{beamer}
  
 \usepackage[utf8]{inputenc}
- 
- 
+\usepackage{mystyle}
+\usepackage{magic_dice}
+
 %Information to be included in the title page:
 \title{DiCE: The Infinitely Differentiable Monte Carlo Estimator}
 \author{Anonymous}
 \institute{Overleaf}
 \date{2014}
  
- 
+\newcommand{\dice}{{\scshape DiCE}} 
+\newcommand{\magicbox}{{\scshape MagicBox}} 
  
 \begin{document}
  
@@ -17,23 +19,206 @@
  
 \begin{frame}
 \frametitle{Motivation}
-\begin{enumerate}
-\item 
-\end{enumerate}
+\begin{itemize}
+\item The score function estimator is widely used for estimating gradients of
+objectives involving stochastic computation graphs (SCG)
+\item Convenient to define a \textit{surrogate loss} (SL)
+whose derivative is the gradient estimator for use in auto-diff (Schulman et al., 2015) 
+\item However, recursive application of the surrogate loss procedure does not match the respective
+derivatives of the original loss
+\item DiCE provides a simple programmatic recipe for correctly computing
+higher order derivatives on SCGs
+\end{itemize}
 \end{frame}
 
 \begin{frame}
-\frametitle{Problem Setup}
-\begin{enumerate}
-\item 
-\end{enumerate}
+\frametitle{Notation}
+\begin{itemize}
+\item Random variables $x$
+\item The $\bot(\cdot)$ operator sets the gradient to zero (.detach)
+\end{itemize}
 \end{frame}
 
 \begin{frame}
 \frametitle{Surrogate Loss}
+\begin{itemize}
+\item Loss of interest 
+$$\mcL(\theta) = \Es{p_\theta(x)}{f_\theta(x)}$$
+\item Surrogate loss
+$$SL(f_\theta, x) = \log p_\theta(x)\bot(f_\theta(x)) + f_\theta(x)$$
+\item Where the gradient of the surrogate loss is an unbiased estimator of the gradient of 
+the original loss
+$$\nabla_\theta \mcL(\theta) = \Es{p_\theta(x)}{\nabla_\theta SL(\mcL, \theta, x)}$$
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{First-order derivatives}
+\begin{itemize}
+\item The gradient of the original loss is given by
+\begin{align*}
+\nabla_\theta \mcL(\theta)
+&= \Es{x}{\mathbin{\color{red}{f_\theta(x)}}\nabla_\theta \log p_\theta(x) + \nabla_\theta f_\theta(x)}\\
+&=\Es{x}{g(x)}
+\end{align*}
+\item The gradient of the surrogate loss is given by
+\begin{align*}
+\nabla_\theta SL(\mcL, \theta, x)
+&= \nabla_\theta \log p_\theta(x) \bot(f_\theta(x)) + \nabla_\theta f_\theta(x)\\
+&= \mathbin{\color{red}{\bot(f_\theta(x))}}
+    \nabla_\theta \log p_\theta(x) + \nabla_\theta f_\theta(x)\\
+&= g_{SL}(x)
+\end{align*}
+where the extra term $\log p_\theta(x) \nabla_\theta f_\theta(x)$ 
+would be included if not for the $\bot(\cdot)$ operator
+\item The gradient-stoppage of $\bot(f_\theta(x))$ in $g_{SL}(x)$
+will cause issues with higher order gradients
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Higher-order derivatives}
+\begin{itemize}
+\item Second derivative of original loss
+\begin{align*}
+\nabla^2_\theta \mcL(\theta) &= \nabla_\theta\Es{x}{g(x)}\\
+&= \Es{x}{g(x)\nabla_\theta\log p_\theta(x) + \nabla_\theta g(x)}
+\end{align*}
+\item Recursive application of SL to $g_{SL}(x)$
+\begin{align*}
+SL(g_{SL}, \theta, x) &= \log p_\theta(x)\bot(g_{SL}(x)) + g_{SL}(x)\\
+\E{\nabla_\theta SL(g_{SL}, \theta, x)}
+&= \E{g_{SL}(x)\nabla_\theta\log p_\theta(x) + \nabla_\theta g_{SL}(x)}
+\end{align*}
+\item However, $\nabla_\theta g(x) \neq \nabla_\theta g_{SL}(x)$
+(but $g(x) = g_{SL}(x)$)
+because of the $\bot(f_\theta(x))$ term in $g_{SL}$
+\item Unsurprisingly, you get incorrect gradients when you set
+gradients to zero in your computation graph
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Summary}
+\begin{itemize}
+\item SL works if you apply it a single time
+\item SL fails if you try to apply it recursively,
+since the gradient truncation $\bot(\cdot)$
+drops dependencies
+\item This means there is no way to use SL programmatically
+to obtain higher-order gradient estimators
+\item \dice{} gives us a way to use autodiff to obtain higher-order gradients
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{\dice{} and \magicbox{} $(\magic)$}
+\begin{itemize}
+\item Introduce the \magicbox{} operator with the following properties
 \begin{enumerate}
-\item 
+\item $\magic(x) \rightarrowtail$ 1
+\item $\nabla_\theta\magic(x) = \magic(x)\nabla_\theta \log p_\theta(x)$
 \end{enumerate}
+\item 
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
+\end{frame}
+ 
+\begin{frame}
+\frametitle{Asdf}
+\begin{itemize}
+\item Hi
+\end{itemize}
 \end{frame}
  
 \end{document}
