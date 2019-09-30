@@ -76,6 +76,7 @@ where the extra term $\log p_\theta(x) \nabla_\theta f_\theta(x)$
 would be included if not for the $\bot(\cdot)$ operator
 \item The gradient-stoppage of $\mathbin{\color{red}{\bot(f_\theta(x))}}$ in $g_{SL}(x)$
 will cause issues with higher order gradients
+\item Expected gradient looks a lot like original objective!
 \end{itemize}
 \end{frame}
 
@@ -102,6 +103,12 @@ because of the stopped-gradient term in $g_{SL}$
 \begin{frame}
 \frametitle{Missing term}
 \begin{itemize}
+\item Recall
+\begin{align*}
+g(x) &= f_\theta(x)\nabla_\theta \log p_\theta(x) + \nabla_\theta f_\theta(x)\\
+g_{SL}(x) &= \bot(f_\theta(x))
+    \nabla_\theta \log p_\theta(x) + \nabla_\theta f_\theta(x)
+\end{align*}
 \item We have
 \begin{align*}
 \nabla g(x) &= \nabla f(x)\nabla \log p(x)                              &+ f(x)\nabla^2\log p(x)       &+ \nabla^2 f(x)\\
@@ -140,7 +147,7 @@ to obtain higher-order gradient estimators
 \end{frame}
  
 \begin{frame}
-\frametitle{A nicer loss}
+\frametitle{\dice{} and \magicbox{} $(\magic)$}
 \begin{itemize}
 \item Introduce the \dice{} objective
 $$\mcL_{\magic}(x) = \magic(x)f(x)$$
@@ -172,7 +179,8 @@ with
 \end{itemize}
 \vspace{2em}
 \centering
-\includegraphics[height=0.75in]{slgraph.png}
+\includegraphics[height=0.75in]{slgraph1.png}
+\includegraphics[height=0.75in]{slgraph2.png}
 \end{frame}
  
 
