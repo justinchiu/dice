@@ -21,13 +21,12 @@
 \frametitle{Motivation}
 \begin{itemize}
 \item The score function estimator is widely used for estimating gradients of
-objectives involving stochastic computation graphs (SCG)
+objectives involving stochastic computation graphs, i.e. objectives that look like $\Es{x}{f(x)}$
 \item Convenient to define a \textit{surrogate loss} (SL)
 whose derivative is the gradient estimator for use in auto-diff (Schulman et al., 2015) 
-\item However, recursive application of the surrogate loss procedure does not match the respective
-derivatives of the original loss
-\item DiCE provides a simple programmatic recipe for correctly computing
-higher order derivatives on SCGs
+\item However, recursive application of the surrogate loss procedure leads to incorrect
+higher order derivatives
+\item DiCE provides a simple and correct programmatic recipe for doing so
 \end{itemize}
 \end{frame}
 
@@ -35,25 +34,29 @@ higher order derivatives on SCGs
 \frametitle{Notation}
 \begin{itemize}
 \item Random variables $x$
+\item All functions parameterized by and all gradients taken wrt $\theta$
+\item Will drop $\theta$ subscripts after a while
 \item The $\bot(\cdot)$ operator sets the gradient to zero (.detach)
 \end{itemize}
 \end{frame}
 
 \begin{frame}
-\frametitle{Surrogate Loss}
+\frametitle{Surrogate Loss (SL)}
 \begin{itemize}
 \item Loss of interest 
 $$\mcL(\theta) = \Es{p_\theta(x)}{f_\theta(x)}$$
 \item Surrogate loss
-$$SL(f_\theta, x) = \log p_\theta(x)\bot(f_\theta(x)) + f_\theta(x)$$
+$$SL(f, \theta, x) = \bot(f_\theta(x))\log p_\theta(x) + f_\theta(x)$$
 \item Where the gradient of the surrogate loss is an unbiased estimator of the gradient of 
 the original loss
-$$\nabla_\theta \mcL(\theta) = \Es{p_\theta(x)}{\nabla_\theta SL(\mcL, \theta, x)}$$
+$$\nabla_\theta \mcL(\theta) = \Es{p_\theta(x)}{\nabla_\theta SL(f, \theta, x)}$$
+\item SL scales the log prob of the actions $x$
+using the detached cost $\bot(f(x))$ 
 \end{itemize}
 \end{frame}
 
 \begin{frame}
-\frametitle{First-order derivatives}
+\frametitle{First derivative}
 \begin{itemize}
 \item The gradient of the original loss is given by
 \begin{align*}
@@ -63,38 +66,47 @@ $$\nabla_\theta \mcL(\theta) = \Es{p_\theta(x)}{\nabla_\theta SL(\mcL, \theta, x
 \end{align*}
 \item The gradient of the surrogate loss is given by
 \begin{align*}
-\nabla_\theta SL(\mcL, \theta, x)
-&= \nabla_\theta \log p_\theta(x) \bot(f_\theta(x)) + \nabla_\theta f_\theta(x)\\
+\nabla_\theta SL(f, \theta, x)
+&= \nabla_\theta \bot(f_\theta(x))\log p_\theta(x) + \nabla_\theta f_\theta(x)\\
 &= \mathbin{\color{red}{\bot(f_\theta(x))}}
     \nabla_\theta \log p_\theta(x) + \nabla_\theta f_\theta(x)\\
 &= g_{SL}(x)
 \end{align*}
 where the extra term $\log p_\theta(x) \nabla_\theta f_\theta(x)$ 
 would be included if not for the $\bot(\cdot)$ operator
-\item The gradient-stoppage of $\bot(f_\theta(x))$ in $g_{SL}(x)$
+\item The gradient-stoppage of $\mathbin{\color{red}{\bot(f_\theta(x))}}$ in $g_{SL}(x)$
 will cause issues with higher order gradients
 \end{itemize}
 \end{frame}
 
 \begin{frame}
-\frametitle{Higher-order derivatives}
+\frametitle{Second derivative}
 \begin{itemize}
 \item Second derivative of original loss
 \begin{align*}
 \nabla^2_\theta \mcL(\theta) &= \nabla_\theta\Es{x}{g(x)}\\
-&= \Es{x}{g(x)\nabla_\theta\log p_\theta(x) + \nabla_\theta g(x)}
+&= \Es{x}{g(x)\nabla_\theta\log p_\theta(x) + \mathbin{\color{red}{\nabla_\theta g(x)}}}
 \end{align*}
 \item Recursive application of SL to $g_{SL}(x)$
 \begin{align*}
 SL(g_{SL}, \theta, x) &= \log p_\theta(x)\bot(g_{SL}(x)) + g_{SL}(x)\\
 \E{\nabla_\theta SL(g_{SL}, \theta, x)}
-&= \E{g_{SL}(x)\nabla_\theta\log p_\theta(x) + \nabla_\theta g_{SL}(x)}
+&= \E{\bot(g_{SL}(x))\nabla_\theta\log p_\theta(x) + \mathbin{\color{red}{\nabla_\theta g_{SL}(x)}}}
 \end{align*}
 \item However, $\nabla_\theta g(x) \neq \nabla_\theta g_{SL}(x)$
 (but $g(x) = g_{SL}(x)$)
-because of the $\bot(f_\theta(x))$ term in $g_{SL}$
-\item Unsurprisingly, you get incorrect gradients when you set
-gradients to zero in your computation graph
+because of the stopped-gradient term in $g_{SL}$
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Missing term}
+\begin{itemize}
+\item We have
+\begin{align*}
+\nabla g(x) &= \nabla f(x)\nabla \log p(x)                              &+ f(x)\nabla^2\log p(x)       &+ \nabla^2 f(x)\\
+\nabla g_{SL}(x) &= \underbrace{\nabla \bot(f(x))\nabla \log p(x)}_{=0} &+ \bot(f(x))\nabla^2\log p(x) &+ \nabla^2 f(x)
+\end{align*}
 \end{itemize}
 \end{frame}
 
@@ -119,106 +131,48 @@ to obtain higher-order gradient estimators
 \item $\magic(x) \rightarrowtail$ 1
 \item $\nabla_\theta\magic(x) = \magic(x)\nabla_\theta \log p_\theta(x)$
 \end{enumerate}
-\item 
+\item Intuition
+\begin{enumerate}
+\item Does not change evaluation, so we can apply this directly to the original objective
+\item Serves the same purpose as SL but recovers dropped dependency
+\end{enumerate}
 \end{itemize}
 \end{frame}
  
 \begin{frame}
-\frametitle{Asdf}
+\frametitle{A nicer loss}
 \begin{itemize}
-\item Hi
+\item Introduce the \dice{} objective
+$$\mcL_{\magic} = \magic(x)f(x)$$
+with
+\begin{align*}
+\magic(x) &= \exp(\tau - \bot(\tau))\\
+\tau &= \log p(x)
+\end{align*}
 \end{itemize}
 \end{frame}
  
 \begin{frame}
-\frametitle{Asdf}
+\frametitle{Cost-centric}
 \begin{itemize}
-\item Hi
+\item The \dice{} objective is cost-centric
+\item We augment the objective at every cost node
 \end{itemize}
+\vspace{2em}
+\centering
+\includegraphics[height=1in]{dicegraph.png}
 \end{frame}
  
 \begin{frame}
-\frametitle{Asdf}
+\frametitle{Cost-centric}
 \begin{itemize}
-\item Hi
+\item Whereas SL is action-centric
+\item SL augments the objective at every stochastic node
 \end{itemize}
+\vspace{2em}
+\centering
+\includegraphics[height=0.75in]{slgraph.png}
 \end{frame}
  
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
-\begin{frame}
-\frametitle{Asdf}
-\begin{itemize}
-\item Hi
-\end{itemize}
-\end{frame}
- 
+
 \end{document}
