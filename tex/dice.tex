@@ -143,12 +143,13 @@ to obtain higher-order gradient estimators
 \frametitle{A nicer loss}
 \begin{itemize}
 \item Introduce the \dice{} objective
-$$\mcL_{\magic} = \magic(x)f(x)$$
+$$\mcL_{\magic}(x) = \magic(x)f(x)$$
 with
 \begin{align*}
 \magic(x) &= \exp(\tau - \bot(\tau))\\
 \tau &= \log p(x)
 \end{align*}
+\item and optimize $\Es{x}{\mcL_{\magic}}(x)$
 \end{itemize}
 \end{frame}
  
